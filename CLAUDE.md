@@ -44,6 +44,25 @@ Build the editor target from the project root (PowerShell):
 - Use Enhanced Input (`UInputAction`) for new inputs, not legacy action mappings.
 - New module dependencies go in `EndlessOcean.Build.cs`.
 
+## Unreal MCP (editor access)
+
+The project enables Epic's experimental built-in MCP server (`ModelContextProtocol` and
+`AllToolsets` plugins, editor only). `.mcp.json` points Claude Code at it as `unreal-mcp`.
+
+- It only works while the editor is open. It listens on `http://127.0.0.1:8000/mcp`
+  (loopback only, no auth). Auto-start is off by default in 5.8, so
+  `Config/DefaultEditorPerProjectUserSettings.ini` turns it on (`bAutoStartServer=True`).
+  If the tools are missing, the editor is closed or the server didn't start: check the
+  Output Log, or run `ModelContextProtocol.StartServer` in the editor console.
+- Tool Search is on, so the server lists three meta-tools: `list_toolsets`, `describe_toolset`
+  and `call_tool`. Find the right toolset and tool first, then use `call_tool`.
+- Use MCP for Blueprint, asset, level, material, UMG and StateTree work that can't be done as text.
+  Keep gameplay logic in C++.
+- Tool calls run one at a time on the game thread. Don't send overlapping calls, and split
+  long jobs into shorter calls (Claude Code times out after about 120 seconds).
+- After a C++ change, MCP tools may be stale until `ModelContextProtocol.RefreshTools` runs
+  and the client reconnects.
+
 ## What not to touch
 
 - `Content/` holds binary `.uasset`/`.umap` files (Git LFS). They can't be read or edited as text.
@@ -51,5 +70,4 @@ Build the editor target from the project root (PowerShell):
   editor, or write an editor Python script for them to run.
 - `Binaries/`, `Intermediate/`, `Saved/`, `DerivedDataCache/`, `.vs/` and the `.sln`/`.slnx` files
   are generated. Never edit them.
-- `Config/Default*.ini` are tracked in git even though `.gitignore` lists them. Edits to them are
-  real changes.
+- `Config/Default*.ini` are tracked in git. Edits to them are real project changes.

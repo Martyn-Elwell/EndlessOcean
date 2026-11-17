@@ -1,8 +1,11 @@
 {
+  "enabledMcpjsonServers": ["unreal-mcp"],
   "permissions": {
     "allow": [
       "PowerShell(& \"C:\\Program Files\\Epic Games\\UE_5.8\\Engine\\Build\\BatchFiles\\Build.bat\" *)",
-      "Bash(\"/c/Program Files/Epic Games/UE_5.8/Engine/Build/BatchFiles/Build.bat\" *)"
+      "Bash(\"/c/Program Files/Epic Games/UE_5.8/Engine/Build/BatchFiles/Build.bat\" *)",
+      "mcp__unreal-mcp__list_toolsets",
+      "mcp__unreal-mcp__describe_toolset"
     ],
     "deny": [
       "Edit(/Binaries/**)",
