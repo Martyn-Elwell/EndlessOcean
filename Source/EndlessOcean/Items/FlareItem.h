@@ -29,8 +29,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FFlareStateChangedSignature, AFlare
  * can't be stowed, so picking up something else drops it.
  *
  * Placeholder visuals: a grey cylinder with a red cap. Make BP_Flare from this class to tune it and add sounds.
+ *
+ * Details panel layout: PrioritizeCategories puts our categories directly under Transform (in this order), and
+ * HideCategories removes engine sections that never matter for a held item. Child Blueprints inherit both.
  */
-UCLASS(Blueprintable)
+UCLASS(Blueprintable,
+	PrioritizeCategories=(Flare, Item),
+	HideCategories=(Replication, Networking, HLOD, Cooking, LOD, DataLayers, WorldPartition, Input))
 class ENDLESSOCEAN_API AFlareItem : public AHeldItem
 {
 	GENERATED_BODY()
