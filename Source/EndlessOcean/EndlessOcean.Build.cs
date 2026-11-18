@@ -18,7 +18,8 @@ public class EndlessOcean : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate",
+			"DeveloperSettings"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
@@ -30,7 +31,10 @@ public class EndlessOcean : ModuleRules
 			"EndlessOcean/Variant_Shooter",
 			"EndlessOcean/Variant_Shooter/AI",
 			"EndlessOcean/Variant_Shooter/UI",
-			"EndlessOcean/Variant_Shooter/Weapons"
+			"EndlessOcean/Variant_Shooter/Weapons",
+			"EndlessOcean/Player",
+			"EndlessOcean/Interaction",
+			"EndlessOcean/Items"
 		});
 
 		// Uncomment if you are using Slate UI
