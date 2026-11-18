@@ -102,6 +102,33 @@ this section always wins over anything else in this file.
   and what will change, and wait for a yes. This includes the template code in
   `Source/EndlessOcean/`, `Variant_Horror/` and `Variant_Shooter/`.
 
+### Plans (paper trail)
+
+Every plan is kept as a versioned Markdown file in the repo, so the team can look back at
+what was planned and why decisions were made.
+
+- **Where:** `Docs/Plans/<YYYY-MM-DD>-<short-topic>/`, one folder per plan, dated when the
+  plan was started (e.g. `Docs/Plans/2026-11-18-oxygen-system/`).
+- **Versions:** each version of a plan is its own file, `v1.md`, `v2.md`, `v3.md` and so on.
+  Never overwrite or edit an earlier version; any change to the plan becomes a new file.
+- **This covers plan mode and any other planning:** design breakdowns, feature scoping,
+  architecture decisions and so on.
+- **In plan mode** only the plan file can be written. As soon as the plan is approved and
+  plan mode ends, save every version that was presented to the user, rejected ones included,
+  as `v1.md`, `v2.md`, …, before starting the work.
+- **Each file starts with a header:**
+  ```markdown
+  # <Plan title> (v<N>)
+  - Date: <YYYY-MM-DD>
+  - Status: Proposed | Rejected | Approved | Superseded by v<N+1> | Done
+  - Changes from v<N-1>: <what changed and why, including the user's feedback>
+  ```
+  Then the plan itself. Record the decisions made and the alternatives considered.
+- Update only the `Status` line of an earlier version (e.g. to `Superseded by v3`). That's the
+  one allowed edit to an old version.
+- Add a line for each new plan folder to the index in `Docs/Plans/README.md`.
+- Commit plan files on the same branch as the work they describe.
+
 ### Git
 
 - **Branch for each new line of development.** Before starting a feature or system, create
