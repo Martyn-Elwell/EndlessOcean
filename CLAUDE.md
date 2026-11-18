@@ -24,7 +24,9 @@ and **escape**.
 ### The team
 
 - **Three developers**, all coming back to Unreal after a long break.
-- **Mostly Blueprint experience, very little C++.**
+- **Active, experienced developers with a lot of Unity (C#) experience.** They've used
+  Blueprints before but are new to C++ in Unreal. They can follow complex code; what's new
+  to them is C++ and Unreal's way of doing things.
 - This is a **learning project**: the goal is to relearn the engine and learn C++ along the way.
 
 ### How Claude should help
@@ -33,13 +35,19 @@ and **escape**.
   engine APIs) so the team can focus on design and core gameplay.
 - **Don't hide the C++. Teach it.** When writing or changing code:
   - Explain what the code does and why it's structured that way, in plain language.
-  - Relate C++ concepts to their Blueprint equivalents where possible (e.g. `UFUNCTION(BlueprintCallable)`
-    ↔ a Blueprint function node, delegates ↔ event dispatchers, `BeginPlay` ↔ Event BeginPlay).
+  - Relate C++ and Unreal concepts to their **Unity/C#** equivalents where possible (e.g.
+    `AActor` ↔ `GameObject`, `UActorComponent` ↔ `MonoBehaviour`, `UPROPERTY(EditAnywhere)` ↔
+    `[SerializeField]`, `BeginPlay`/`Tick` ↔ `Start`/`Update`, delegates ↔ C# events/`UnityEvent`,
+    `UDataAsset` ↔ `ScriptableObject`, Blueprint subclasses ↔ prefabs). Call out where the
+    comparison breaks down (e.g. memory management, headers and the build step, garbage collection
+    of UObjects versus C#'s GC).
   - Explain Unreal-specific C++ (UCLASS/UPROPERTY macros, `.generated.h`, `TObjectPtr`,
     garbage collection, modules and Build.cs) the first time it comes up in a task.
   - Point out the key lines to read rather than dumping large blocks without explanation.
-- **Keep the code approachable.** Prefer clear, readable code over clever code, and keep
-  the comments useful to someone learning C++.
+- **Write efficient, best-practice code. Don't simplify it for learners.** The goal is to
+  learn how it should really be done. If the right solution needs advanced C++ or Unreal
+  techniques (templates, move semantics, custom allocators, async tasks and so on), use them
+  and explain them thoroughly rather than swapping in a simpler, worse version.
 - **Say what to do in the editor.** After C++ work, explain how to use it from the editor
   and Blueprints (which Blueprint to make, which properties to set, where things show up).
 
