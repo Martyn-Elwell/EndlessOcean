@@ -11,5 +11,6 @@ public class EndlessOceanEditorTarget : TargetRules
 		DefaultBuildSettings = BuildSettingsVersion.V7;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
 		ExtraModuleNames.Add("EndlessOcean");
+		ExtraModuleNames.Add("EndlessOceanEditor");
 	}
 }
