@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -14,7 +14,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSurvivorSprintStateChangedSignature
  * there's one source of truth for "how fast can I go right now", and walk/crouch/sprint can't fight each other.
  * The stamina cost lives elsewhere (UStaminaComponent); this class only reports when sprinting starts and stops.
  */
-UCLASS()
+UCLASS(PrioritizeCategories=(Sprint))
 class ENDLESSOCEAN_API USurvivorMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_BODY()
@@ -50,14 +50,14 @@ protected:
 	virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
 
 	/** Top speed while sprinting. Walk speed is the standard Max Walk Speed property. */
-	UPROPERTY(EditAnywhere, Category="Character Movement: Sprint", meta=(ClampMin=0, ClampMax=1200, UIMax=800, Units="cm/s"))
+	UPROPERTY(EditAnywhere, Category="Sprint", meta=(ClampMin=0, ClampMax=1200, UIMax=800, Units="cm/s"))
 	float SprintSpeed = 430.0f;
 
 	/**
 	 * How "forward" the movement input must be to allow sprinting. 1 = straight ahead only, 0 = up to sideways,
 	 * -1 = any direction (including backwards).
 	 */
-	UPROPERTY(EditAnywhere, Category="Character Movement: Sprint", meta=(ClampMin=-1, ClampMax=1))
+	UPROPERTY(EditAnywhere, Category="Sprint", meta=(ClampMin=-1, ClampMax=1))
 	float MinSprintForwardDot = 0.5f;
 
 private:

@@ -31,8 +31,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHeldItemLocationChangedSignature, 
  * overriding UsePrimary and the Can* checks.
  *
  * The static mesh is the root component so physics moves the whole actor when it's dropped.
+ *
+ * HideCategories is inherited by every item subclass, removing engine sections that never matter for a held item.
  */
-UCLASS(Abstract, Blueprintable)
+UCLASS(Abstract, Blueprintable,
+	PrioritizeCategories=(Item),
+	HideCategories=(Replication, Networking, HLOD, Cooking, LOD, DataLayers, WorldPartition, Input))
 class ENDLESSOCEAN_API AHeldItem : public AActor, public IInteractable
 {
 	GENERATED_BODY()

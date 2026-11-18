@@ -18,7 +18,7 @@ class USurvivorHUDWidget;
  *
  * Make a Blueprint child (BP_SurvivorPlayerController) to assign the mapping contexts, modifier and HUD classes.
  */
-UCLASS(Abstract)
+UCLASS(Abstract, PrioritizeCategories=(Camera, UI, Input))
 class ENDLESSOCEAN_API ASurvivorPlayerController : public APlayerController
 {
 	GENERATED_BODY()

@@ -14,7 +14,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionFocusChangedSignature, 
  * a "what am I looking at" prompt and costs a fraction of a per-frame trace.
  * Uses the owner's view point (the camera, including head-bob), so it matches what the player sees.
  */
-UCLASS(ClassGroup=(EndlessOcean), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(EndlessOcean), PrioritizeCategories=(Interaction), meta=(BlueprintSpawnableComponent))
 class ENDLESSOCEAN_API UInteractionComponent : public UActorComponent
 {
 	GENERATED_BODY()

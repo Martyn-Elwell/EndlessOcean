@@ -23,7 +23,7 @@ struct FInputActionValue;
  *
  * Make a Blueprint child (BP_SurvivorCharacter) to assign Input Actions and tune values.
  */
-UCLASS(Abstract)
+UCLASS(Abstract, PrioritizeCategories=(Crouch, Input))
 class ENDLESSOCEAN_API ASurvivorCharacter : public ACharacter
 {
 	GENERATED_BODY()

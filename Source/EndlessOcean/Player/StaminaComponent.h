@@ -16,7 +16,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaminaExhaustedChangedSignature, b
  *
  * No Tick: a fixed-rate timer runs only while stamina is draining or regenerating, and stops when full.
  */
-UCLASS(ClassGroup=(EndlessOcean), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(EndlessOcean), PrioritizeCategories=(Stamina), meta=(BlueprintSpawnableComponent))
 class ENDLESSOCEAN_API UStaminaComponent : public UActorComponent
 {
 	GENERATED_BODY()

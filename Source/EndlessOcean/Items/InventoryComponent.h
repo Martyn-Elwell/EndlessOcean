@@ -15,7 +15,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FInventoryChangedSignature);
  * This is storage only. The hand lives in UItemHolderComponent. Keeping them separate lets other systems
  * (a repair point asking "do you have a wrench?", the HUD) query the inventory without knowing about hands.
  */
-UCLASS(ClassGroup=(EndlessOcean), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(EndlessOcean), PrioritizeCategories=(Inventory), meta=(BlueprintSpawnableComponent))
 class ENDLESSOCEAN_API UInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
