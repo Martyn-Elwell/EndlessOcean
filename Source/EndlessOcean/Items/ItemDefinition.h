@@ -53,6 +53,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Release", meta=(ClampMin=0, ClampMax=1440, Units="deg/s"))
 	float ThrowSpin = 360.0f;
 
+	/**
+	 * How much of the character's own velocity a released item keeps. 0 = none (a throw while sprinting goes as far
+	 * as a standing throw), 1 = all of it (physically correct, but sprint-throws fly much too far).
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Release", meta=(ClampMin=0, ClampMax=1, UIMin=0, UIMax=1))
+	float InheritedVelocityScale = 0.2f;
+
 	/** Speed along the view direction when simply dropped. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Release", meta=(ClampMin=0, ClampMax=500, Units="cm/s"))
 	float DropSpeed = 100.0f;

@@ -210,7 +210,9 @@ void UItemHolderComponent::ReleaseHeldItem(float ForwardSpeed, float UpSpeed, fl
 	FVector Velocity = ViewRotation.Vector() * ForwardSpeed + FVector::UpVector * UpSpeed;
 	if (const AActor* Owner = GetOwner())
 	{
-		Velocity += Owner->GetVelocity(); // inherit our movement so throws while walking feel right
+		// Keep only a little of our own movement: enough that a throw while walking doesn't look like it hits an
+		// invisible wall, without sprint-throws flying across the room.
+		Velocity += Owner->GetVelocity() * ItemHolder::GetDefaults(Item)->InheritedVelocityScale;
 	}
 
 	// Tumble end over end around the camera's right axis.
