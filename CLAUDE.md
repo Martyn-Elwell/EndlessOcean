@@ -21,6 +21,16 @@ and **escape**.
   time allows. Design systems so they can be extended later without rewrites.
 - When suggesting features, say how big they are and flag anything that puts the deadline at risk.
 
+**Inspirations:** use these as reference points for tone, mechanics and design discussions.
+The notes say what each game is known for; they don't commit us to any of it.
+
+- **Alien: Isolation:** a single relentless stalker AI you can't kill; hiding, evading and sound-based tension.
+- **SOMA:** an isolated underwater facility, oppressive atmosphere and environmental storytelling.
+- **Resident Evil 7: Biohazard:** first-person survival horror, stalker encounters, scarce resources.
+- **Subnautica:** the ocean as a vast, beautiful and threatening place; scavenging, crafting and repair.
+- **Still Wakes the Deep:** a disaster at sea (an oil rig) with a monster, collapsing and
+  flooding structures, no combat, and an ordinary worker trying to escape.
+
 ### The team
 
 - **Three developers**, all coming back to Unreal after a long break.
