@@ -3,6 +3,56 @@
 Horror game for the Month Of Horror Jam 3 (itch.io). Unreal Engine 5.8, C++ project,
 started from the First Person template (with its Horror and Shooter variants).
 
+## Working rules
+
+These are the project owner's standing rules. They may be added to or changed later;
+this section always wins over anything else in this file.
+
+### Code
+
+- **Write C++.** Gameplay systems, components and tools are C++. Blueprints are only for
+  wiring, content and tuning, never for core logic.
+- **Use Unreal best practice.** Follow the Epic coding standard, use `TObjectPtr` for
+  UPROPERTY object pointers, forward-declare in headers and include in `.cpp` files, keep
+  headers lean, prefer `const` correctness, and avoid Tick when a timer, delegate or event will do.
+- **Build modular, reusable systems.** Prefer self-contained `UActorComponent`s and subsystems
+  over logic packed into characters or game modes. Systems talk through delegates, interfaces
+  and gameplay tags rather than hard references to each other's classes. Put shared
+  configuration in `UDataAsset`/`UPrimaryDataAsset` or `UDeveloperSettings`, not hard-coded values.
+- **Comment well.** Every class, public function and UPROPERTY gets a `/** */` doc comment
+  (Unreal shows these as editor tooltips). Explain *why* in the implementation where it isn't
+  obvious. Don't leave commented-out code.
+- **Make everything easy to configure.** Expose tuning values with `UPROPERTY(EditAnywhere)`
+  and give them a `Category`, sensible `ClampMin`/`ClampMax`/`UIMin`/`UIMax`, `Units`, and
+  `EditCondition`/`EditConditionHides` so the Details panel only shows what's relevant.
+  Add `UFUNCTION(CallInEditor)` buttons for useful in-editor actions.
+- **Build custom editors and inspectors** where they make a system smoother to use:
+  `IDetailCustomization` / `IPropertyTypeCustomization`, component visualizers, editor
+  utility widgets, asset actions and validators. All editor-only code lives in a separate
+  `EndlessOceanEditor` editor module (`Type: Editor` in the `.uproject`). Create that module
+  the first time it's needed. Editor code never goes in the runtime module.
+- **Structure files sensibly.** Give each new system its own folder,
+  e.g. `Source/EndlessOcean/Oxygen/`, with related classes kept together. Add new folders
+  to `PublicIncludePaths` in `EndlessOcean.Build.cs`. One main class per file, with
+  the file named after the class without its prefix (`OxygenComponent.h` for `UOxygenComponent`).
+
+### Editing vs creating
+
+- **Creating new source files:** go ahead without asking.
+- **Editing an existing source file** (`.h`, `.cpp`, `.Build.cs`, `.Target.cs`, editor
+  Python scripts) that wasn't created in the current task: ask first. Say which file
+  and what will change, and wait for a yes. This includes the template code in
+  `Source/EndlessOcean/`, `Variant_Horror/` and `Variant_Shooter/`.
+
+### Git
+
+- **Branch for each new line of development.** Before starting a feature or system, create
+  a branch from an up-to-date `main` with a short, descriptive name (e.g. `oxygen-system`).
+- **Commit and push the branch regularly**, at each working step, with clear messages.
+  Build before committing C++ changes, and never commit code that doesn't compile.
+- **Never commit to or push `main` unless the user explicitly says to.** When a branch's work
+  is done, ask the user whether to merge it into `main`, and only merge on their yes.
+
 ## Engine
 
 - Engine install: `C:\Program Files\Epic Games\UE_5.8`
