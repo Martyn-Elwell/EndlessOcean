@@ -84,6 +84,14 @@ this section always wins over anything else in this file.
   and give them a `Category`, sensible `ClampMin`/`ClampMax`/`UIMin`/`UIMax`, `Units`, and
   `EditCondition`/`EditConditionHides` so the Details panel only shows what's relevant.
   Add `UFUNCTION(CallInEditor)` buttons for useful in-editor actions.
+- **Put our settings at the top of the Details panel.** Every `UCLASS` with editable properties
+  lists its own categories in `PrioritizeCategories=(...)`, most-tuned first. The
+  `EndlessOceanEditor` module picks this up automatically and places those categories directly
+  under Transform. Category names have no spaces (`HeadBob`, not `"Head Bob"`), because the
+  list is space-separated; the editor still displays them with spaces. Subcategories
+  (`Flare|Burn`) follow their parent. Actor classes also `HideCategories=(...)` engine
+  sections that never apply (Replication, Networking, HLOD, Cooking, LOD, DataLayers,
+  WorldPartition, and so on); put this on the base class so subclasses inherit it.
 - **Build custom editors and inspectors** where they make a system smoother to use:
   `IDetailCustomization` / `IPropertyTypeCustomization`, component visualizers, editor
   utility widgets, asset actions and validators. All editor-only code lives in a separate
