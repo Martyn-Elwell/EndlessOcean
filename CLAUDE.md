@@ -3,6 +3,46 @@
 Horror game for the Month Of Horror Jam 3 (itch.io). Unreal Engine 5.8, C++ project,
 started from the First Person template (with its Horror and Shooter variants).
 
+## Project overview
+
+### The jam
+
+- **Jam:** Month Of Horror Jam 3 (itch.io). Theme: **Endless Ocean**.
+- **Dates:** 18 November 2026 to **21 December 2026**. Everything must be playable and
+  submitted by then, so favour working features over perfect ones as the deadline nears.
+
+### The game
+
+You're aboard a **sinking ship**. Avoid a **monster** that hunts you, **repair the ship**
+and **escape**.
+
+- **Scope starts small and grows with progress.** First build a minimal playable loop
+  (move, hide from or evade the monster, fix something, escape). Only then add features as
+  time allows. Design systems so they can be extended later without rewrites.
+- When suggesting features, say how big they are and flag anything that puts the deadline at risk.
+
+### The team
+
+- **Three developers**, all coming back to Unreal after a long break.
+- **Mostly Blueprint experience, very little C++.**
+- This is a **learning project**: the goal is to relearn the engine and learn C++ along the way.
+
+### How Claude should help
+
+- **Take on the heavy, detailed programming** (boilerplate, plumbing, editor tooling, tricky
+  engine APIs) so the team can focus on design and core gameplay.
+- **Don't hide the C++. Teach it.** When writing or changing code:
+  - Explain what the code does and why it's structured that way, in plain language.
+  - Relate C++ concepts to their Blueprint equivalents where possible (e.g. `UFUNCTION(BlueprintCallable)`
+    ↔ a Blueprint function node, delegates ↔ event dispatchers, `BeginPlay` ↔ Event BeginPlay).
+  - Explain Unreal-specific C++ (UCLASS/UPROPERTY macros, `.generated.h`, `TObjectPtr`,
+    garbage collection, modules and Build.cs) the first time it comes up in a task.
+  - Point out the key lines to read rather than dumping large blocks without explanation.
+- **Keep the code approachable.** Prefer clear, readable code over clever code, and keep
+  the comments useful to someone learning C++.
+- **Say what to do in the editor.** After C++ work, explain how to use it from the editor
+  and Blueprints (which Blueprint to make, which properties to set, where things show up).
+
 ## Working rules
 
 These are the project owner's standing rules. They may be added to or changed later;
