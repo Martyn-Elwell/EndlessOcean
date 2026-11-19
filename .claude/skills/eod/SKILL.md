@@ -38,8 +38,25 @@ git status --short
   not for repeating tool output. Never quote anything sensitive from them (credentials, emails, personal details).
 - The logs only cover this machine's sessions. Say so in the summary, and rely on git for teammates' work.
 
-**Project docs:**
-- New or changed plans under `Docs/Plans/` in the window, and their status.
+**Plans (`Docs/Plans/`, see "Plans (paper trail)" in CLAUDE.md):**
+Check every branch, not only the current one. Plans are committed on their feature branch, so look at
+`git log --all --since="<window start>" --name-status -- Docs/Plans` and `git ls-tree -r --name-only <branch> Docs/Plans`.
+- **Activity:** which plan folders were created in the window, and which new versions (`vN.md`) were added. Read each
+  new version's header (date, status, "Changes from") to get what changed and why.
+- **Status of every open plan:** list plans whose latest version isn't `Done` or `Rejected`, with their status and
+  branch. Also flag `Done` plans whose branch isn't merged into `main` yet.
+- **Compliance with the paper-trail rule.** Flag any of these as open items:
+  - Planning in the window (plan mode in the session logs: an approved plan, `ExitPlanMode`, a plan file under
+    `~/.claude/plans/`, or a design breakdown in chat) with **no matching folder** in `Docs/Plans/`.
+  - A plan folder with **no entry in `Docs/Plans/README.md`**, or an index row whose latest version or status doesn't
+    match the folder's newest file.
+  - A superseded version whose `Status` line wasn't updated (e.g. v1 still `Approved` when v2 exists).
+  - A missing header, or gaps in version numbers.
+  - Plan files committed on a different branch from the work they describe.
+- Report findings only. Don't fix plans as part of `/eod`: list each fix under "Not done / open items" so the user can
+  ask for it.
+
+**Other project docs:**
 - Rule changes in `CLAUDE.md` (from the git log).
 
 ## 3. Write the file
@@ -64,8 +81,12 @@ Sources: <which git branches and which Claude sessions were used>.
 ### Decisions made today
 <choices made, with the reason; alternatives that were rejected>
 
+## Plans
+| Plan | Branch | Latest version | Status | Change today |
+<one row per plan touched today or still open; then a short "Paper trail" line: "all in order", or the problems found>
+
 ## Not done / open items
-<unmerged branches, untested work, uncommitted files, known breakages, rules not yet followed>
+<unmerged branches, untested work, uncommitted files, known breakages, rules not yet followed (including paper-trail gaps)>
 
 ## Next steps
 <numbered, highest priority first; flag anything that puts the deadline at risk>
