@@ -31,6 +31,20 @@ FText AHeldItem::GetDisplayName() const
 	return FText::FromString(GetName());
 }
 
+bool AHeldItem::IsUsableWhileSwimming() const
+{
+	return Definition && Definition->bUsableWhileSwimming;
+}
+
+void AHeldItem::AltActionStarted_Implementation()
+{
+	// Default right-click: throw. Most items have nothing better to do with it.
+	if (UItemHolderComponent* CurrentHolder = GetHolder())
+	{
+		CurrentHolder->ThrowHeldItem();
+	}
+}
+
 void AHeldItem::SetHeld(UItemHolderComponent* InHolder, USceneComponent* HandAnchor)
 {
 	check(HandAnchor);

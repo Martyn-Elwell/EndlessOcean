@@ -1,5 +1,6 @@
 #include "SurvivorHUDWidget.h"
 
+#include "BreathComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "HeldItem.h"
@@ -48,6 +49,29 @@ void USurvivorHUDWidget::ObservePawn(APawn* Pawn)
 		InventoryComp->OnInventoryChanged.AddDynamic(this, &USurvivorHUDWidget::HandleInventoryChanged);
 		HandleInventoryChanged();
 	}
+
+	Breath = Pawn->FindComponentByClass<UBreathComponent>();
+	if (UBreathComponent* BreathComp = Breath.Get())
+	{
+		BreathComp->OnBreathChanged.AddDynamic(this, &USurvivorHUDWidget::HandleBreathChanged);
+		BreathComp->OnSubmergedChanged.AddDynamic(this, &USurvivorHUDWidget::HandleSubmergedChanged);
+		HandleBreathChanged(BreathComp->GetBreathNormalized());
+	}
+}
+
+void USurvivorHUDWidget::HandleBreathChanged(float NormalizedBreath)
+{
+	const UBreathComponent* BreathComp = Breath.Get();
+	const bool bVisible = BreathComp && (BreathComp->IsSubmerged() || NormalizedBreath < 1.0f);
+	OnBreathChanged(NormalizedBreath, bVisible);
+}
+
+void USurvivorHUDWidget::HandleSubmergedChanged(bool bSubmerged)
+{
+	if (const UBreathComponent* BreathComp = Breath.Get())
+	{
+		HandleBreathChanged(BreathComp->GetBreathNormalized());
+	}
 }
 
 void USurvivorHUDWidget::NativeDestruct()
@@ -80,7 +104,13 @@ void USurvivorHUDWidget::StopObserving()
 	{
 		Flare->OnFlareStateChanged.RemoveDynamic(this, &USurvivorHUDWidget::HandleFlareStateChanged);
 	}
+	if (UBreathComponent* BreathComp = Breath.Get())
+	{
+		BreathComp->OnBreathChanged.RemoveDynamic(this, &USurvivorHUDWidget::HandleBreathChanged);
+		BreathComp->OnSubmergedChanged.RemoveDynamic(this, &USurvivorHUDWidget::HandleSubmergedChanged);
+	}
 
+	Breath.Reset();
 	Stamina.Reset();
 	Interaction.Reset();
 	ItemHolder.Reset();

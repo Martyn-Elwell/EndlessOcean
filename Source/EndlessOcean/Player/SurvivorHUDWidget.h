@@ -6,6 +6,7 @@
 #include "SurvivorHUDWidget.generated.h"
 
 class AHeldItem;
+class UBreathComponent;
 class UInteractionComponent;
 class UInventoryComponent;
 class UItemHolderComponent;
@@ -56,6 +57,13 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category="Survivor HUD")
 	void OnFlareTimeChanged(bool bVisible, float SecondsRemaining, float NormalizedRemaining);
 
+	/**
+	 * Breath changed (0 to 1). bVisible is true while underwater or still refilling, so the bar can hide itself when
+	 * it isn't relevant. There is deliberately no health event: health shows as screen effects, not a bar.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category="Survivor HUD")
+	void OnBreathChanged(float NormalizedBreath, bool bVisible);
+
 	/** How often the flare timer refreshes. */
 	UPROPERTY(EditAnywhere, Category="Survivor HUD", meta=(ClampMin=0.05, ClampMax=1, Units="s"))
 	float FlareTimerInterval = 0.1f;
@@ -80,6 +88,12 @@ private:
 	UFUNCTION()
 	void HandleFlareStateChanged(AFlareItem* Flare, EFlareState NewState);
 
+	UFUNCTION()
+	void HandleBreathChanged(float NormalizedBreath);
+
+	UFUNCTION()
+	void HandleSubmergedChanged(bool bSubmerged);
+
 	/** Pushes the current flare burn time to Blueprint. */
 	void UpdateFlareTimer();
 
@@ -94,6 +108,7 @@ private:
 	TWeakObjectPtr<UInteractionComponent> Interaction;
 	TWeakObjectPtr<UItemHolderComponent> ItemHolder;
 	TWeakObjectPtr<UInventoryComponent> Inventory;
+	TWeakObjectPtr<UBreathComponent> Breath;
 	TWeakObjectPtr<AFlareItem> WatchedFlare;
 
 	FTimerHandle FlareTimer;

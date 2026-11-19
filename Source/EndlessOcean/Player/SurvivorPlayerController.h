@@ -4,9 +4,12 @@
 #include "GameFramework/PlayerController.h"
 #include "SurvivorPlayerController.generated.h"
 
+class AActor;
+class UHealthComponent;
 class UInputMappingContext;
 class USurvivorCameraModifier;
 class USurvivorHUDWidget;
+class UUnderwaterCameraModifier;
 
 /**
  * Player controller for the survivor. It handles input mapping contexts, the camera-motion modifier
@@ -18,7 +21,7 @@ class USurvivorHUDWidget;
  *
  * Make a Blueprint child (BP_SurvivorPlayerController) to assign the mapping contexts, modifier and HUD classes.
  */
-UCLASS(Abstract, PrioritizeCategories=(Camera, UI, Input))
+UCLASS(Abstract, PrioritizeCategories=(Camera, Death, UI, Input))
 class ENDLESSOCEAN_API ASurvivorPlayerController : public APlayerController
 {
 	GENERATED_BODY()
@@ -53,11 +56,32 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Camera")
 	TSubclassOf<USurvivorCameraModifier> CameraModifierClass;
 
+	/** Underwater look (tint, blur), always active. Use a Blueprint subclass to tune it. */
+	UPROPERTY(EditAnywhere, Category="Camera")
+	TSubclassOf<UUnderwaterCameraModifier> UnderwaterModifierClass;
+
+	/** Fade to black on death. */
+	UPROPERTY(EditAnywhere, Category="Death", meta=(ClampMin=0, ClampMax=10, Units="s"))
+	float DeathFadeTime = 1.5f;
+
+	/** Time from death until the level restarts. Placeholder until checkpoints exist. */
+	UPROPERTY(EditAnywhere, Category="Death", meta=(ClampMin=0, ClampMax=30, Units="s"))
+	float RestartDelay = 3.0f;
+
 	/** HUD widget to create. */
 	UPROPERTY(EditAnywhere, Category="UI")
 	TSubclassOf<USurvivorHUDWidget> HUDWidgetClass;
 
 private:
+
+	/** Health of the possessed pawn, so we can unbind when it changes. */
+	TWeakObjectPtr<UHealthComponent> PawnHealth;
+
+	FTimerHandle RestartTimer;
+
+	/** The possessed pawn died: stop input, fade out, then restart the level. */
+	UFUNCTION()
+	void HandlePawnDeath(UHealthComponent* HealthComponent, AActor* DamageCauser);
 
 	/** The modifier instance owned by our PlayerCameraManager. */
 	UPROPERTY(Transient)

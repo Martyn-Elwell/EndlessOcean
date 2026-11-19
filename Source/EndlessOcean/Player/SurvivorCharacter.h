@@ -4,7 +4,10 @@
 #include "GameFramework/Character.h"
 #include "SurvivorCharacter.generated.h"
 
+class UBreathComponent;
 class UCameraComponent;
+class UDamageScreenEffectComponent;
+class UHealthComponent;
 class UInputAction;
 class UInteractionComponent;
 class UInventoryComponent;
@@ -14,8 +17,8 @@ class USurvivorMovementComponent;
 struct FInputActionValue;
 
 /**
- * The player: an ordinary ship worker. Slow, can't jump, can crouch, has a short stamina sprint,
- * and carries one item in hand plus a few stowed.
+ * The player: an ordinary ship worker. Slow, can't jump, can crouch, has a short stamina sprint, can swim (with
+ * limited breath), and carries one item in hand plus a few stowed.
  *
  * The character is deliberately thin. Behaviour lives in components (stamina, interaction, hand, inventory) and
  * in the movement component; this class creates them, wires them together with delegates, and turns input
@@ -23,7 +26,7 @@ struct FInputActionValue;
  *
  * Make a Blueprint child (BP_SurvivorCharacter) to assign Input Actions and tune values.
  */
-UCLASS(Abstract, PrioritizeCategories=(Crouch, Input))
+UCLASS(Abstract, PrioritizeCategories=(Crouch, FallDamage, Input))
 class ENDLESSOCEAN_API ASurvivorCharacter : public ACharacter
 {
 	GENERATED_BODY()
@@ -56,11 +59,20 @@ public:
 	UFUNCTION(BlueprintPure, Category="Survivor")
 	UInventoryComponent* GetInventory() const { return Inventory; }
 
+	UFUNCTION(BlueprintPure, Category="Survivor")
+	UHealthComponent* GetHealth() const { return Health; }
+
+	UFUNCTION(BlueprintPure, Category="Survivor")
+	UBreathComponent* GetBreath() const { return Breath; }
+
 protected:
 
 	virtual void PostInitializeComponents() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaSeconds) override;
+
+	/** Applies fall damage when landing hard. */
+	virtual void Landed(const FHitResult& Hit) override;
 
 	/** Never allow jumping, whatever calls Jump(). */
 	virtual bool CanJumpInternal_Implementation() const override { return false; }
@@ -90,6 +102,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UInventoryComponent> Inventory;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UHealthComponent> Health;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UBreathComponent> Breath;
+
+	/** Shows damage and drowning as screen vignettes (there is no health bar). Assign its material in the Blueprint. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UDamageScreenEffectComponent> DamageScreenEffect;
+
 	// --- Input ---
 
 	UPROPERTY(EditAnywhere, Category="Input")
@@ -106,8 +128,21 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> SprintAction;
 
+	/** Crouch on land; held while swimming, it dives. */
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> CrouchAction;
+
+	/** Swim upwards while held (Space). At the surface, against a low ledge, climbs out. */
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> SwimUpAction;
+
+	/** Held item's alternate action while held (right mouse: aim the pistol, throw a flare). */
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> AltUseAction;
+
+	/** Reload the held item. */
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> ReloadAction;
 
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> InteractAction;
@@ -144,6 +179,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Crouch", meta=(ClampMin=1, ClampMax=40))
 	float CrouchCameraInterpSpeed = 10.0f;
 
+	/** Landing slower than this is harmless. 900 cm/s is roughly a 4 m drop. */
+	UPROPERTY(EditAnywhere, Category="FallDamage", meta=(ClampMin=0, ClampMax=5000, Units="cm/s"))
+	float FallDamageMinSpeed = 900.0f;
+
+	/** Landing at this speed or faster deals FallDamageMax. 1600 cm/s is roughly a 13 m drop. */
+	UPROPERTY(EditAnywhere, Category="FallDamage", meta=(ClampMin=0, ClampMax=10000, Units="cm/s"))
+	float FallDamageMaxSpeed = 1600.0f;
+
+	/** Damage at FallDamageMinSpeed. */
+	UPROPERTY(EditAnywhere, Category="FallDamage", meta=(ClampMin=0, ClampMax=1000))
+	float FallDamageMin = 10.0f;
+
+	/** Damage at FallDamageMaxSpeed and above. */
+	UPROPERTY(EditAnywhere, Category="FallDamage", meta=(ClampMin=0, ClampMax=1000))
+	float FallDamageMax = 100.0f;
+
 private:
 
 	// Input handlers. Each does one small thing and hands off to a component.
@@ -152,7 +203,12 @@ private:
 	void HandleSprintStarted();
 	void HandleSprintCompleted();
 	void HandleCrouchStarted();
+	void HandleCrouchHeld();
 	void HandleCrouchCompleted();
+	void HandleSwimUpHeld();
+	void HandleAltUseStarted();
+	void HandleAltUseCompleted();
+	void HandleReload();
 	void HandleInteract();
 	void HandleUseItem();
 	void HandleThrowItem();
