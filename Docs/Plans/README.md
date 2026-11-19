@@ -14,3 +14,4 @@ See "Plans (paper trail)" in [CLAUDE.md](../../CLAUDE.md) for the full rules.
 | Date | Plan | Latest version | Status |
 |---|---|---|---|
 | 2026-11-18 | [Survivor player character, held items and flare](2026-11-18-player-character/) | [v3](2026-11-18-player-character/v3.md) | Done (playtested, merged into `main`) |
+| 2026-11-19 | [Swimming, breath, SPP-1 underwater pistol and wrench](2026-11-19-swimming-and-weapons/) | [v2](2026-11-19-swimming-and-weapons/v2.md) | Approved (in progress on `player-character`) |
