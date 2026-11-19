@@ -123,6 +123,16 @@ void AHeldItem::SetPhysicalInWorld(bool bInWorld)
 {
 	if (bInWorld)
 	{
+		// Give the parts their collision back first, so they weld into the root's body when it starts simulating.
+		for (const FSuspendedCollision& Suspended : SuspendedCollision)
+		{
+			if (UPrimitiveComponent* Part = Suspended.Component.Get())
+			{
+				Part->SetCollisionEnabled(Suspended.Collision);
+			}
+		}
+		SuspendedCollision.Reset();
+
 		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		Mesh->SetSimulatePhysics(true);
 	}
@@ -131,6 +141,18 @@ void AHeldItem::SetPhysicalInWorld(bool bInWorld)
 		// Physics must be off before attaching, or the body would keep simulating and ignore the attachment.
 		Mesh->SetSimulatePhysics(false);
 		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		// Every other part goes quiet too. Only parts that still collide are recorded, so a second call (held, then
+		// stowed) doesn't overwrite the saved settings with NoCollision.
+		TInlineComponentArray<UPrimitiveComponent*> Parts(this);
+		for (UPrimitiveComponent* Part : Parts)
+		{
+			if (Part != Mesh && Part->GetCollisionEnabled() != ECollisionEnabled::NoCollision)
+			{
+				SuspendedCollision.Add({Part, Part->GetCollisionEnabled()});
+				Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			}
+		}
 	}
 }
 

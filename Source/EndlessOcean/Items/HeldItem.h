@@ -7,6 +7,7 @@
 
 class UItemDefinition;
 class UItemHolderComponent;
+class UPrimitiveComponent;
 class UStaticMeshComponent;
 
 /** Where an item currently is. */
@@ -158,7 +159,20 @@ private:
 	/** The hand holding us. Weak because the holder owns the relationship, not us. */
 	TWeakObjectPtr<UItemHolderComponent> Holder;
 
-	/** Switches between "in the world" physics and "carried" (no physics, no collision). */
+	/** A part whose collision was switched off while carried, and the setting to give back when released. */
+	struct FSuspendedCollision
+	{
+		TWeakObjectPtr<UPrimitiveComponent> Component;
+		ECollisionEnabled::Type Collision;
+	};
+
+	/**
+	 * Parts (anything but the root Mesh) that had collision when the item was picked up. Carried items must not
+	 * collide with anything, or a part in front of the camera would block the holder's own capsule and traces.
+	 */
+	TArray<FSuspendedCollision> SuspendedCollision;
+
+	/** Switches between "in the world" physics and "carried" (no physics, no collision on any part). */
 	void SetPhysicalInWorld(bool bInWorld);
 
 	/** Updates the state and broadcasts. */
