@@ -80,13 +80,21 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Breath", meta=(ClampMin=0.02, ClampMax=0.5, Units="s"))
 	float UpdateInterval = 0.1f;
 
-	/** Damage per second while drowning. */
-	UPROPERTY(EditAnywhere, Category="Drowning", meta=(ClampMin=0, ClampMax=100))
-	float DrowningDamagePerSecond = 8.0f;
+	/**
+	 * Seconds from running out of breath to death, starting at full health. Each tick deals the matching share of the
+	 * owner's max health (from its UHealthComponent), so this stays true if MaxHealth is retuned. Already-injured
+	 * players die sooner.
+	 */
+	UPROPERTY(EditAnywhere, Category="Drowning", meta=(ClampMin=0.5, ClampMax=60, Units="s"))
+	float DrowningTimeToDeath = 5.0f;
 
-	/** Time between drowning damage ticks. */
+	/** Time between drowning damage ticks. Shorter ticks close the black vignette more smoothly. */
 	UPROPERTY(EditAnywhere, Category="Drowning", meta=(ClampMin=0.1, ClampMax=5, Units="s"))
-	float DrowningDamageInterval = 1.0f;
+	float DrowningDamageInterval = 0.5f;
+
+	/** Max health assumed when the owner has no UHealthComponent (it then just receives raw damage events). */
+	UPROPERTY(EditAnywhere, Category="Drowning", AdvancedDisplay, meta=(ClampMin=1))
+	float FallbackMaxHealth = 100.0f;
 
 private:
 

@@ -3,6 +3,7 @@
 #include "DrowningDamageType.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
+#include "HealthComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "WaterQueryLibrary.h"
@@ -93,6 +94,13 @@ void UBreathComponent::ApplyDrowningDamage()
 {
 	AActor* Owner = GetOwner();
 	const APawn* Pawn = Cast<APawn>(Owner);
-	UGameplayStatics::ApplyDamage(Owner, DrowningDamagePerSecond * DrowningDamageInterval,
-		Pawn ? Pawn->GetController() : nullptr, Owner, UDrowningDamageType::StaticClass());
+
+	// Spread max health over DrowningTimeToDeath, one share per tick. With the defaults (100 HP, 5 s, 0.5 s ticks)
+	// that's 10 damage per tick, and the tenth tick lands exactly 5 s after the breath ran out.
+	const UHealthComponent* Health = Owner->FindComponentByClass<UHealthComponent>();
+	const float MaxHealth = Health ? Health->GetMaxHealth() : FallbackMaxHealth;
+	const float Damage = MaxHealth * DrowningDamageInterval / DrowningTimeToDeath;
+
+	UGameplayStatics::ApplyDamage(Owner, Damage, Pawn ? Pawn->GetController() : nullptr, Owner,
+		UDrowningDamageType::StaticClass());
 }

@@ -93,21 +93,20 @@ float UDamageScreenEffectComponent::GetHealthNormalized() const
 
 float UDamageScreenEffectComponent::GetTargetDrown() const
 {
+	// Only while drowning damage is being taken: low breath alone is shown by the HUD's breath bar, not the screen.
 	const UBreathComponent* BreathComp = Breath.Get();
-	if (!BreathComp)
+	if (!BreathComp || !BreathComp->IsDrowning())
 	{
 		return 0.0f;
 	}
 
-	if (BreathComp->IsDrowning())
-	{
-		// Out of air: start mostly closed, and close completely as drowning damage takes health away.
-		return DrownAmountAtNoBreath + (1.0f - DrownAmountAtNoBreath) * (1.0f - GetHealthNormalized());
-	}
+	// Start partly closed, and close completely as drowning damage takes the remaining health away.
+	return DrownAmountAtStart + (1.0f - DrownAmountAtStart) * (1.0f - GetHealthNormalized());
+}
 
-	// Closing as breath runs low, from 0 at DrownStartBreath to DrownAmountAtNoBreath at empty.
-	const float Low = 1.0f - FMath::Clamp(BreathComp->GetBreathNormalized() / DrownStartBreath, 0.0f, 1.0f);
-	return Low * DrownAmountAtNoBreath;
+bool UDamageScreenEffectComponent::IsHeartbeatActive(float HealthNorm) const
+{
+	return bHeartbeat && HeartbeatStrength > 0.0f && HealthNorm > 0.0f && HealthNorm < HeartbeatHealthThreshold;
 }
 
 void UDamageScreenEffectComponent::UpdateEffect()
@@ -118,12 +117,13 @@ void UDamageScreenEffectComponent::UpdateEffect()
 	// Drowning: ease towards the target so the vignette visibly creeps in and opens up again at the surface.
 	CurrentDrown = FMath::FInterpTo(CurrentDrown, GetTargetDrown(), DeltaTime, DrownBlendSpeed);
 
-	// Blood: hit pulse (fading) + lasting level from missing health + heartbeat at low health.
+	// Blood: hit pulse (fading), plus the optional lasting level and heartbeat (both off by default).
 	BloodPulse = FMath::Max(0.0f, BloodPulse - DeltaTime / HitPulseFadeTime);
 	const float Persistent = PersistentBloodAtZeroHealth * (1.0f - HealthNorm);
 
+	const bool bHeartbeatActive = IsHeartbeatActive(HealthNorm);
 	float Heartbeat = 0.0f;
-	if (HealthNorm < HeartbeatHealthThreshold && HealthNorm > 0.0f)
+	if (bHeartbeatActive)
 	{
 		HeartbeatPhase = FMath::Fmod(HeartbeatPhase + DeltaTime * HeartbeatRate, 1.0f);
 		// A sharp "thump" rather than a smooth sine: raise a half-wave to a high power.
@@ -136,10 +136,9 @@ void UDamageScreenEffectComponent::UpdateEffect()
 	VignetteMID->SetScalarParameterValue(DamageScreenEffect::DrownParam, CurrentDrown);
 	VignetteMID->SetScalarParameterValue(DamageScreenEffect::BloodParam, Blood);
 
-	// Stop once nothing is animating. The material keeps the last values (e.g. a lasting blood level), and any
-	// health or breath change wakes us again. The heartbeat animates on its own, so it keeps the timer alive.
+	// Stop once nothing is animating. The material keeps the last values (zero by default), and any health or breath
+	// change wakes us again. The heartbeat animates on its own, so it keeps the timer alive.
 	const bool bDrownSettled = FMath::IsNearlyEqual(CurrentDrown, GetTargetDrown(), DamageScreenEffect::VisibleThreshold);
-	const bool bHeartbeatActive = HealthNorm < HeartbeatHealthThreshold && HealthNorm > 0.0f;
 	if (bDrownSettled && BloodPulse <= 0.0f && !bHeartbeatActive)
 	{
 		GetWorld()->GetTimerManager().ClearTimer(UpdateTimer);

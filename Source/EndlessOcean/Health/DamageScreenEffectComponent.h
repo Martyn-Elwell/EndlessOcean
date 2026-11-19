@@ -14,9 +14,12 @@ class UMaterialInterface;
 /**
  * Shows the player's condition on screen instead of a health bar.
  *
- *  - Drowning: a black vignette closes in as breath runs low, and closes further as drowning damage lands.
- *  - Anything else (falls, cuts, the monster): a red, blood-like vignette. A hit pulses it strongly, then it settles to
- *    a level that scales with missing health, and a heartbeat throb is added at low health.
+ *  - Drowning: a black vignette appears once the breath runs out (when drowning damage starts) and closes in as that
+ *    damage takes health away. It opens again at the surface.
+ *  - Anything else (falls, cuts, the monster): a red, blood-like vignette that pulses on each hit and fades away.
+ *
+ * By default the screen is clean whenever the player isn't taking damage, whatever their health. Optional extras for
+ * tuning: a lasting blood level that scales with missing health, and a heartbeat throb at low health (both off).
  *
  * It drives two scalar parameters ("DrownAmount" and "BloodAmount", 0 to 1) on a post-process material
  * (M_PP_DamageVignette) added to the owner's camera. All the look lives in the material, and all the timing lives
@@ -60,29 +63,32 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Blood", meta=(ClampMin=0.1, ClampMax=10, Units="s"))
 	float HitPulseFadeTime = 1.2f;
 
-	/** Lasting blood vignette at 0 health; it scales down linearly to nothing at full health. */
+	/**
+	 * Optional lasting blood vignette at 0 health; it scales down linearly to nothing at full health. 0 (default) shows
+	 * blood only while being hit.
+	 */
 	UPROPERTY(EditAnywhere, Category="Blood", meta=(ClampMin=0, ClampMax=1))
-	float PersistentBloodAtZeroHealth = 0.65f;
+	float PersistentBloodAtZeroHealth = 0.0f;
 
-	/** Below this fraction of health, a heartbeat throb is added. */
-	UPROPERTY(EditAnywhere, Category="Heartbeat", meta=(ClampMin=0, ClampMax=1))
+	/** Optional red throb at low health. Off by default, so the screen is clean between hits. */
+	UPROPERTY(EditAnywhere, Category="Heartbeat")
+	bool bHeartbeat = false;
+
+	/** Below this fraction of health, the heartbeat throb plays. */
+	UPROPERTY(EditAnywhere, Category="Heartbeat", meta=(EditCondition="bHeartbeat", EditConditionHides, ClampMin=0, ClampMax=1))
 	float HeartbeatHealthThreshold = 0.35f;
 
 	/** Heartbeats per second. */
-	UPROPERTY(EditAnywhere, Category="Heartbeat", meta=(ClampMin=0.2, ClampMax=4, Units="Hz"))
+	UPROPERTY(EditAnywhere, Category="Heartbeat", meta=(EditCondition="bHeartbeat", EditConditionHides, ClampMin=0.2, ClampMax=4, Units="Hz"))
 	float HeartbeatRate = 1.1f;
 
 	/** Strength of the heartbeat throb. */
-	UPROPERTY(EditAnywhere, Category="Heartbeat", meta=(ClampMin=0, ClampMax=1))
+	UPROPERTY(EditAnywhere, Category="Heartbeat", meta=(EditCondition="bHeartbeat", EditConditionHides, ClampMin=0, ClampMax=1))
 	float HeartbeatStrength = 0.15f;
 
-	/** Breath fraction at which the black vignette starts to close. */
-	UPROPERTY(EditAnywhere, Category="Drowning", meta=(ClampMin=0.01, ClampMax=1))
-	float DrownStartBreath = 0.35f;
-
-	/** How closed the vignette is when breath runs out. Drowning damage closes it the rest of the way. */
+	/** How closed the black vignette is the moment drowning starts. Drowning damage closes it the rest of the way. */
 	UPROPERTY(EditAnywhere, Category="Drowning", meta=(ClampMin=0, ClampMax=1))
-	float DrownAmountAtNoBreath = 0.6f;
+	float DrownAmountAtStart = 0.3f;
 
 	/** How quickly the black vignette follows its target (higher = snappier). */
 	UPROPERTY(EditAnywhere, Category="Drowning", meta=(ClampMin=0.1, ClampMax=20))
@@ -116,4 +122,5 @@ private:
 
 	float GetHealthNormalized() const;
 	float GetTargetDrown() const;
+	bool IsHeartbeatActive(float HealthNorm) const;
 };
