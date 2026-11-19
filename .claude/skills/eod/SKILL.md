@@ -8,11 +8,20 @@ description: Write an end-of-day summary for EndlessOcean from git history and t
 Write a Markdown summary of the day's work to `Docs/EndOfDay/<YYYY-MM-DD>.md`.
 
 ## 1. Work out the day and the time window
-- The **working day** is today's date. If it's before about 05:00 and the session started the
-  previous evening, use the previous day's date (a late-night session belongs to the day it started).
-- The window runs from the end of the previous summary (the newest file in `Docs/EndOfDay/`, by its
-  date) or, if there isn't one, from 00:00 on the working day, up to now.
-- If a file for that date already exists, add a `## Update (HH:MM)` section to it rather than overwriting it.
+All times are **local time** (UK: GMT in winter, BST in summer). Get it with `Get-Date` / `date`.
+
+- **A working day runs from 03:00 to 03:00 the next morning.** The user sometimes codes past midnight
+  but never after 03:00. Anything from 00:00 to 02:59 belongs to the previous date: at 01:30 on
+  20 Nov, the working day is **19 Nov**, and its file is `Docs/EndOfDay/<19 Nov>.md`.
+- **Day boundaries:** `<day start>` = 03:00 on the working day; `<day end>` = 03:00 the next day.
+- **The window** depends on whether that day's file already exists:
+  - **No file yet:** from `<day start>` up to now.
+  - **File exists (a later run on the same day):** from the time the existing file was last written up to now. Take
+    that time from `git log -1 --format=%ad --date=iso-local -- <file>` if the file is committed, or from its
+    last-modified time if it isn't, whichever is later. Add a `## Update (HH:MM)` section to the end of the file
+    covering only that window. Never rewrite earlier sections.
+- If the working day before has no summary, say so in one line ("No summary for <date>"). Don't backfill it unless asked.
+- Use the working day's date in the heading and for the jam day count, not the calendar date the command was run on.
 
 ## 2. Gather the sources (read-only)
 Run these in parallel where possible.
@@ -20,7 +29,7 @@ Run these in parallel where possible.
 **Git, all branches, everyone's work:**
 ```bash
 git fetch -q
-git log --all --since="<window start>" --date=format:"%Y-%m-%d %H:%M" --pretty="%ad | %D | %h | %an | %s"
+git log --all --since="<window start>" --date=format-local:"%Y-%m-%d %H:%M" --pretty="%ad | %D | %h | %an | %s"
 git branch -vv
 git status --short
 ```
@@ -34,6 +43,9 @@ git status --short
 - Each line is JSON. The user's requests are entries with `type == "user"` and
   `message.role == "user"`. Their text is `message.content` (a string, or a list of parts with
   `type == "text"`). Skip text that starts with `<` (system and tool content). Use `timestamp` to stay inside the window.
+- **`timestamp` is UTC** (ISO 8601 ending in `Z`). Convert it to local time before comparing it with the window or
+  showing it, e.g. PowerShell `([DateTimeOffset]$o.timestamp).ToLocalTime()`. Git's `--date=...-local` formats are
+  already local. Comparing the raw strings looks right in winter (UK time = UTC) but is an hour out during BST.
 - Use these logs for **intent and decisions** (what was asked, what was chosen, what was rejected),
   not for repeating tool output. Never quote anything sensitive from them (credentials, emails, personal details).
 - The logs only cover this machine's sessions. Say so in the summary, and rely on git for teammates' work.
