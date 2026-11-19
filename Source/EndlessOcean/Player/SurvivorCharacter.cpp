@@ -1,5 +1,6 @@
 #include "SurvivorCharacter.h"
 
+#include "AmmoPouchComponent.h"
 #include "BreathComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -51,6 +52,7 @@ ASurvivorCharacter::ASurvivorCharacter(const FObjectInitializer& ObjectInitializ
 	Inventory = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory"));
 	Health = CreateDefaultSubobject<UHealthComponent>(TEXT("Health"));
 	Breath = CreateDefaultSubobject<UBreathComponent>(TEXT("Breath"));
+	AmmoPouch = CreateDefaultSubobject<UAmmoPouchComponent>(TEXT("AmmoPouch"));
 	DamageScreenEffect = CreateDefaultSubobject<UDamageScreenEffectComponent>(TEXT("DamageScreenEffect"));
 
 	// The inherited skeletal mesh is unused until the visual pass.

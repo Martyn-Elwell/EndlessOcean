@@ -90,6 +90,14 @@ void UHealthComponent::Heal(float Amount)
 	OnHealthChanged.Broadcast(this, Health, Health - OldHealth, nullptr);
 }
 
+void UHealthComponent::Revive()
+{
+	const float OldHealth = Health;
+	bIsDead = false;
+	Health = MaxHealth;
+	OnHealthChanged.Broadcast(this, Health, Health - OldHealth, nullptr);
+}
+
 void UHealthComponent::RestartRegenDelay()
 {
 	if (!bRegenerate)

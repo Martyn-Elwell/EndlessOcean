@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include "SurvivorCharacter.generated.h"
 
+class UAmmoPouchComponent;
 class UBreathComponent;
 class UCameraComponent;
 class UDamageScreenEffectComponent;
@@ -107,6 +108,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UBreathComponent> Breath;
+
+	/** Spare ammunition (counted, not in inventory slots). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UAmmoPouchComponent> AmmoPouch;
 
 	/** Shows damage and drowning as screen vignettes (there is no health bar). Assign its material in the Blueprint. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")

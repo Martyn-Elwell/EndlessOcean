@@ -1,7 +1,9 @@
 #include "SurvivorHUDWidget.h"
 
+#include "AmmoPouchComponent.h"
 #include "BreathComponent.h"
 #include "Engine/World.h"
+#include "FirearmItem.h"
 #include "GameFramework/Pawn.h"
 #include "HeldItem.h"
 #include "InteractionComponent.h"
@@ -48,6 +50,13 @@ void USurvivorHUDWidget::ObservePawn(APawn* Pawn)
 	{
 		InventoryComp->OnInventoryChanged.AddDynamic(this, &USurvivorHUDWidget::HandleInventoryChanged);
 		HandleInventoryChanged();
+	}
+
+	AmmoPouch = Pawn->FindComponentByClass<UAmmoPouchComponent>();
+	if (UAmmoPouchComponent* Pouch = AmmoPouch.Get())
+	{
+		Pouch->OnAmmoChanged.AddDynamic(this, &USurvivorHUDWidget::HandlePouchChanged);
+		RefreshWeaponAmmo();
 	}
 
 	Breath = Pawn->FindComponentByClass<UBreathComponent>();
@@ -109,8 +118,14 @@ void USurvivorHUDWidget::StopObserving()
 		BreathComp->OnBreathChanged.RemoveDynamic(this, &USurvivorHUDWidget::HandleBreathChanged);
 		BreathComp->OnSubmergedChanged.RemoveDynamic(this, &USurvivorHUDWidget::HandleSubmergedChanged);
 	}
+	if (UAmmoPouchComponent* Pouch = AmmoPouch.Get())
+	{
+		Pouch->OnAmmoChanged.RemoveDynamic(this, &USurvivorHUDWidget::HandlePouchChanged);
+	}
+	WatchFirearm(nullptr);
 
 	Breath.Reset();
+	AmmoPouch.Reset();
 	Stamina.Reset();
 	Interaction.Reset();
 	ItemHolder.Reset();
@@ -120,6 +135,71 @@ void USurvivorHUDWidget::StopObserving()
 	if (const UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(FlareTimer);
+		World->GetTimerManager().ClearTimer(WeaponTimer);
+	}
+}
+
+void USurvivorHUDWidget::WatchFirearm(AHeldItem* Item)
+{
+	if (AFirearmItem* Old = WatchedFirearm.Get())
+	{
+		Old->OnAmmoChanged.RemoveDynamic(this, &USurvivorHUDWidget::HandleFirearmAmmoChanged);
+	}
+
+	WatchedFirearm = Cast<AFirearmItem>(Item);
+
+	UWorld* World = GetWorld();
+	if (AFirearmItem* Firearm = WatchedFirearm.Get())
+	{
+		Firearm->OnAmmoChanged.AddDynamic(this, &USurvivorHUDWidget::HandleFirearmAmmoChanged);
+		if (World)
+		{
+			World->GetTimerManager().SetTimer(WeaponTimer, this, &USurvivorHUDWidget::UpdateWeaponStatus, WeaponStatusInterval, true);
+		}
+		UpdateWeaponStatus();
+	}
+	else
+	{
+		if (World)
+		{
+			World->GetTimerManager().ClearTimer(WeaponTimer);
+		}
+		OnWeaponStatus(false, 0.0f, 0.0f, false, 0.0f);
+	}
+
+	RefreshWeaponAmmo();
+}
+
+void USurvivorHUDWidget::RefreshWeaponAmmo()
+{
+	const AFirearmItem* Firearm = WatchedFirearm.Get();
+	if (!Firearm)
+	{
+		OnWeaponAmmoChanged(false, 0, 0, 0);
+		return;
+	}
+
+	const UAmmoPouchComponent* Pouch = AmmoPouch.Get();
+	const int32 Spare = Pouch ? Pouch->GetCount(Firearm->GetAmmoType()) : 0;
+	OnWeaponAmmoChanged(true, Firearm->GetLoadedRounds(), Firearm->GetCapacity(), Spare);
+}
+
+void USurvivorHUDWidget::HandleFirearmAmmoChanged(AFirearmItem* Firearm, int32 LoadedRounds, int32 Capacity)
+{
+	RefreshWeaponAmmo();
+}
+
+void USurvivorHUDWidget::HandlePouchChanged(FGameplayTag AmmoType, int32 NewCount)
+{
+	RefreshWeaponAmmo();
+}
+
+void USurvivorHUDWidget::UpdateWeaponStatus()
+{
+	if (const AFirearmItem* Firearm = WatchedFirearm.Get())
+	{
+		const bool bReloading = Firearm->GetReloadState() != EFirearmReloadState::None;
+		OnWeaponStatus(true, Firearm->GetCurrentSpread(), Firearm->GetAimAlpha(), bReloading, Firearm->GetReloadStepProgress());
 	}
 }
 
@@ -155,6 +235,7 @@ void USurvivorHUDWidget::HandleHeldItemChanged(AHeldItem* NewItem, AHeldItem* Ol
 	}
 
 	RefreshFlareTimer();
+	WatchFirearm(NewItem);
 
 	// The active slot changes with the held item, so refresh the slot highlight too.
 	HandleInventoryChanged();

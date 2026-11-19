@@ -3,9 +3,12 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "FlareItem.h" // full include: a UFUNCTION takes EFlareState by value, and the generated code needs the complete enum
+#include "GameplayTagContainer.h" // FGameplayTag is passed by value to a UFUNCTION
 #include "SurvivorHUDWidget.generated.h"
 
+class AFirearmItem;
 class AHeldItem;
+class UAmmoPouchComponent;
 class UBreathComponent;
 class UInteractionComponent;
 class UInventoryComponent;
@@ -64,6 +67,24 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category="Survivor HUD")
 	void OnBreathChanged(float NormalizedBreath, bool bVisible);
 
+	/**
+	 * Ammo of the held firearm. bVisible is false when no firearm is in hand.
+	 * Spare is the matching ammo in the pouch.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category="Survivor HUD")
+	void OnWeaponAmmoChanged(bool bVisible, int32 Loaded, int32 Capacity, int32 Spare);
+
+	/**
+	 * Live firearm state, sent repeatedly while a firearm is in hand: spread (degrees, for sizing the crosshair), how
+	 * aimed it is (hide the crosshair when aimed), and reload progress (bReloading false = hide the bar).
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category="Survivor HUD")
+	void OnWeaponStatus(bool bVisible, float SpreadDegrees, float AimAlpha, bool bReloading, float ReloadProgress);
+
+	/** How often the firearm status refreshes. */
+	UPROPERTY(EditAnywhere, Category="Survivor HUD", meta=(ClampMin=0.02, ClampMax=0.5, Units="s"))
+	float WeaponStatusInterval = 0.05f;
+
 	/** How often the flare timer refreshes. */
 	UPROPERTY(EditAnywhere, Category="Survivor HUD", meta=(ClampMin=0.05, ClampMax=1, Units="s"))
 	float FlareTimerInterval = 0.1f;
@@ -94,6 +115,21 @@ private:
 	UFUNCTION()
 	void HandleSubmergedChanged(bool bSubmerged);
 
+	UFUNCTION()
+	void HandleFirearmAmmoChanged(AFirearmItem* Firearm, int32 LoadedRounds, int32 Capacity);
+
+	UFUNCTION()
+	void HandlePouchChanged(FGameplayTag AmmoType, int32 NewCount);
+
+	/** Pushes the held firearm's ammo to Blueprint (or hides it). */
+	void RefreshWeaponAmmo();
+
+	/** Timer callback: pushes live firearm status. */
+	void UpdateWeaponStatus();
+
+	/** Starts following a new held item for weapon display (or stops, if it isn't a firearm). */
+	void WatchFirearm(AHeldItem* Item);
+
 	/** Pushes the current flare burn time to Blueprint. */
 	void UpdateFlareTimer();
 
@@ -109,7 +145,10 @@ private:
 	TWeakObjectPtr<UItemHolderComponent> ItemHolder;
 	TWeakObjectPtr<UInventoryComponent> Inventory;
 	TWeakObjectPtr<UBreathComponent> Breath;
+	TWeakObjectPtr<UAmmoPouchComponent> AmmoPouch;
 	TWeakObjectPtr<AFlareItem> WatchedFlare;
+	TWeakObjectPtr<AFirearmItem> WatchedFirearm;
 
 	FTimerHandle FlareTimer;
+	FTimerHandle WeaponTimer;
 };

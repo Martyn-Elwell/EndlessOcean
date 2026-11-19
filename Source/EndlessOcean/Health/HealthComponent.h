@@ -48,6 +48,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Health")
 	void Heal(float Amount);
 
+	/** Brings a dead component back to full health (test dummies, respawning). */
+	UFUNCTION(BlueprintCallable, Category="Health")
+	void Revive();
+
 	/** Broadcast on every change (damage or healing). Delta is negative for damage. DamageType is null for healing. */
 	UPROPERTY(BlueprintAssignable, Category="Health")
 	FHealthChangedSignature OnHealthChanged;
