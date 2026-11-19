@@ -5,7 +5,8 @@ The paper trail of every plan made for EndlessOcean: what we planned, what chang
 - One folder per plan: `<YYYY-MM-DD>-<short-topic>/`
 - One file per version: `v1.md`, `v2.md`, … Earlier versions are never overwritten; only
   their `Status` line changes when they're superseded.
-- Each version opens with its date, status, and what changed from the previous version.
+- Each version opens with its date and status. Every version after v1 then has a
+  "Changes from v<N-1>" section listing what was added, changed and removed, and why.
 
 See "Plans (paper trail)" in [CLAUDE.md](../../CLAUDE.md) for the full rules.
 

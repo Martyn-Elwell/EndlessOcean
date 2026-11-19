@@ -129,9 +129,21 @@ what was planned and why decisions were made.
   # <Plan title> (v<N>)
   - Date: <YYYY-MM-DD>
   - Status: Proposed | Rejected | Approved | Superseded by v<N+1> | Done
-  - Changes from v<N-1>: <what changed and why, including the user's feedback>
   ```
   Then the plan itself. Record the decisions made and the alternatives considered.
+- **Every version after v1 highlights its changes near the top**, in a section directly
+  under the header, before the plan itself, so a reader can see what's new without
+  comparing files:
+  ```markdown
+  ## Changes from v<N-1>
+  **Why:** <the user's feedback or the reason for this revision>
+  - **Added:** <new item> (in "<section name>")
+  - **Changed:** <what it was> → <what it is now> (in "<section name>")
+  - **Removed:** <dropped item> (from "<section name>"): <why>
+  ```
+  List every change, grouped as Added, Changed and Removed, and leave out empty groups.
+  Name the section each change sits in. The rest of the file is still the complete plan,
+  not just the differences.
 - Update only the `Status` line of an earlier version (e.g. to `Superseded by v3`). That's the
   one allowed edit to an old version.
 - Add a line for each new plan folder to the index in `Docs/Plans/README.md`.
