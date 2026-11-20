@@ -4,10 +4,14 @@
 #include "EndlessOceanCameraManager.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
+#include "Engine/World.h"
+#include "HealthComponent.h"
 #include "InputMappingContext.h"
 #include "SurvivorCameraModifier.h"
 #include "SurvivorHUDWidget.h"
 #include "SurvivorSettings.h"
+#include "TimerManager.h"
+#include "UnderwaterCameraModifier.h"
 
 ASurvivorPlayerController::ASurvivorPlayerController()
 {
@@ -30,6 +34,11 @@ void ASurvivorPlayerController::BeginPlay()
 		CameraModifier = Cast<USurvivorCameraModifier>(PlayerCameraManager->AddNewCameraModifier(CameraModifierClass));
 	}
 	SetCameraMotionEnabled(GetDefault<USurvivorSettings>()->bCameraMotionEnabledByDefault);
+
+	if (PlayerCameraManager && UnderwaterModifierClass)
+	{
+		PlayerCameraManager->AddNewCameraModifier(UnderwaterModifierClass);
+	}
 
 	if (HUDWidgetClass)
 	{
@@ -69,6 +78,12 @@ void ASurvivorPlayerController::OnPossess(APawn* InPawn)
 	{
 		HUDWidget->ObservePawn(InPawn);
 	}
+
+	PawnHealth = InPawn ? InPawn->FindComponentByClass<UHealthComponent>() : nullptr;
+	if (UHealthComponent* HealthComp = PawnHealth.Get())
+	{
+		HealthComp->OnDeath.AddDynamic(this, &ASurvivorPlayerController::HandlePawnDeath);
+	}
 }
 
 void ASurvivorPlayerController::OnUnPossess()
@@ -78,7 +93,33 @@ void ASurvivorPlayerController::OnUnPossess()
 		HUDWidget->ObservePawn(nullptr);
 	}
 
+	if (UHealthComponent* HealthComp = PawnHealth.Get())
+	{
+		HealthComp->OnDeath.RemoveDynamic(this, &ASurvivorPlayerController::HandlePawnDeath);
+	}
+	PawnHealth.Reset();
+
 	Super::OnUnPossess();
+}
+
+void ASurvivorPlayerController::HandlePawnDeath(UHealthComponent* HealthComponent, AActor* DamageCauser)
+{
+	// Freeze the player where they are and fade out. Restarting the level creates a fresh controller, so nothing
+	// here needs undoing.
+	SetIgnoreMoveInput(true);
+	SetIgnoreLookInput(true);
+
+	if (PlayerCameraManager)
+	{
+		// bHoldWhenFinished keeps the screen black until the level reloads.
+		PlayerCameraManager->StartCameraFade(0.0f, 1.0f, DeathFadeTime, FLinearColor::Black, false, true);
+	}
+
+	GetWorld()->GetTimerManager().SetTimer(RestartTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
+	{
+		// Reloads the current map. Placeholder until checkpoints exist.
+		RestartLevel();
+	}), FMath::Max(RestartDelay, KINDA_SMALL_NUMBER), false);
 }
 
 void ASurvivorPlayerController::SetCameraMotionEnabled(bool bEnabled)

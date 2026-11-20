@@ -48,6 +48,26 @@ void UStaminaComponent::SetDraining(bool bDrain)
 	}
 }
 
+bool UStaminaComponent::TryConsume(float Amount)
+{
+	if (!CanAfford(Amount))
+	{
+		return false;
+	}
+
+	SetStamina(Stamina - Amount);
+
+	// Effort pauses recovery just like stopping a sprint does.
+	if (!bDraining)
+	{
+		FTimerManager& Timers = GetWorld()->GetTimerManager();
+		Timers.ClearTimer(UpdateTimer);
+		Timers.SetTimer(RegenDelayTimer, FTimerDelegate::CreateWeakLambda(this, [this]() { StartUpdating(); }),
+			FMath::Max(RegenDelay, KINDA_SMALL_NUMBER), false);
+	}
+	return true;
+}
+
 void UStaminaComponent::ModifyStamina(float Amount)
 {
 	SetStamina(Stamina + Amount);

@@ -1,13 +1,19 @@
 #include "SurvivorCharacter.h"
 
+#include "AmmoPouchComponent.h"
+#include "BreathComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "DamageScreenEffectComponent.h"
 #include "EndlessOcean.h"
 #include "EnhancedInputComponent.h"
+#include "FallDamageType.h"
+#include "HealthComponent.h"
 #include "InputActionValue.h"
 #include "InteractionComponent.h"
 #include "InventoryComponent.h"
 #include "ItemHolderComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "StaminaComponent.h"
 #include "SurvivorMovementComponent.h"
 
@@ -44,6 +50,10 @@ ASurvivorCharacter::ASurvivorCharacter(const FObjectInitializer& ObjectInitializ
 	Interaction = CreateDefaultSubobject<UInteractionComponent>(TEXT("Interaction"));
 	ItemHolder = CreateDefaultSubobject<UItemHolderComponent>(TEXT("ItemHolder"));
 	Inventory = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory"));
+	Health = CreateDefaultSubobject<UHealthComponent>(TEXT("Health"));
+	Breath = CreateDefaultSubobject<UBreathComponent>(TEXT("Breath"));
+	AmmoPouch = CreateDefaultSubobject<UAmmoPouchComponent>(TEXT("AmmoPouch"));
+	DamageScreenEffect = CreateDefaultSubobject<UDamageScreenEffectComponent>(TEXT("DamageScreenEffect"));
 
 	// The inherited skeletal mesh is unused until the visual pass.
 	GetMesh()->SetOwnerNoSee(true);
@@ -89,10 +99,17 @@ void ASurvivorCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	Input->BindAction(SprintAction, ETriggerEvent::Started, this, &ASurvivorCharacter::HandleSprintStarted);
 	Input->BindAction(SprintAction, ETriggerEvent::Completed, this, &ASurvivorCharacter::HandleSprintCompleted);
 	Input->BindAction(CrouchAction, ETriggerEvent::Started, this, &ASurvivorCharacter::HandleCrouchStarted);
+	Input->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &ASurvivorCharacter::HandleCrouchHeld);
 	Input->BindAction(CrouchAction, ETriggerEvent::Completed, this, &ASurvivorCharacter::HandleCrouchCompleted);
+
+	// "Triggered" fires every frame while the key is held, which is what continuous swimming needs.
+	Input->BindAction(SwimUpAction, ETriggerEvent::Triggered, this, &ASurvivorCharacter::HandleSwimUpHeld);
 
 	Input->BindAction(InteractAction, ETriggerEvent::Started, this, &ASurvivorCharacter::HandleInteract);
 	Input->BindAction(UseItemAction, ETriggerEvent::Started, this, &ASurvivorCharacter::HandleUseItem);
+	Input->BindAction(AltUseAction, ETriggerEvent::Started, this, &ASurvivorCharacter::HandleAltUseStarted);
+	Input->BindAction(AltUseAction, ETriggerEvent::Completed, this, &ASurvivorCharacter::HandleAltUseCompleted);
+	Input->BindAction(ReloadAction, ETriggerEvent::Started, this, &ASurvivorCharacter::HandleReload);
 	Input->BindAction(ThrowItemAction, ETriggerEvent::Started, this, &ASurvivorCharacter::HandleThrowItem);
 	Input->BindAction(DropItemAction, ETriggerEvent::Started, this, &ASurvivorCharacter::HandleDropItem);
 	Input->BindAction(StowItemAction, ETriggerEvent::Started, this, &ASurvivorCharacter::HandleStowItem);
@@ -148,11 +165,75 @@ void ASurvivorCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHei
 	SetActorTickEnabled(true);
 }
 
+void ASurvivorCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	// At this point the movement component still holds the falling velocity from just before impact.
+	const float ImpactSpeed = -GetCharacterMovement()->Velocity.Z;
+	if (ImpactSpeed <= FallDamageMinSpeed)
+	{
+		return;
+	}
+
+	const float Damage = FMath::GetMappedRangeValueClamped(
+		FVector2f(FallDamageMinSpeed, FallDamageMaxSpeed), FVector2f(FallDamageMin, FallDamageMax), ImpactSpeed);
+	UGameplayStatics::ApplyDamage(this, Damage, GetController(), this, UFallDamageType::StaticClass());
+}
+
 void ASurvivorCharacter::HandleMove(const FInputActionValue& Value)
 {
 	const FVector2D Axis = Value.Get<FVector2D>();
+
+	if (GetCharacterMovement()->IsSwimming())
+	{
+		// Underwater, forward follows the camera, so looking down and pressing W dives. The engine's swim mode
+		// accepts full 3D input; on land the vertical part would just be ignored.
+		const FRotationMatrix ControlMatrix(GetControlRotation());
+		AddMovementInput(ControlMatrix.GetUnitAxis(EAxis::X), Axis.Y);
+		AddMovementInput(ControlMatrix.GetUnitAxis(EAxis::Y), Axis.X);
+		return;
+	}
+
 	AddMovementInput(GetActorForwardVector(), Axis.Y);
 	AddMovementInput(GetActorRightVector(), Axis.X);
+}
+
+void ASurvivorCharacter::HandleSwimUpHeld()
+{
+	if (!GetCharacterMovement()->IsSwimming())
+	{
+		return;
+	}
+
+	// At the surface against a low ledge, climb out; otherwise just swim up.
+	if (!GetSurvivorMovement()->TryClimbOutOfWater())
+	{
+		AddMovementInput(FVector::UpVector, 1.0f);
+	}
+}
+
+void ASurvivorCharacter::HandleCrouchHeld()
+{
+	if (GetCharacterMovement()->IsSwimming())
+	{
+		AddMovementInput(FVector::UpVector, -1.0f);
+	}
+}
+
+void ASurvivorCharacter::HandleAltUseStarted()
+{
+	ItemHolder->StartAltAction();
+}
+
+void ASurvivorCharacter::HandleAltUseCompleted()
+{
+	ItemHolder->StopAltAction();
+}
+
+void ASurvivorCharacter::HandleReload()
+{
+	ItemHolder->ReloadHeldItem();
 }
 
 void ASurvivorCharacter::HandleLook(const FInputActionValue& Value)
@@ -179,6 +260,12 @@ void ASurvivorCharacter::HandleSprintCompleted()
 
 void ASurvivorCharacter::HandleCrouchStarted()
 {
+	// In water the crouch key dives instead (see HandleCrouchHeld).
+	if (GetCharacterMovement()->IsSwimming())
+	{
+		return;
+	}
+
 	if (bToggleCrouch && bIsCrouched)
 	{
 		UnCrouch();

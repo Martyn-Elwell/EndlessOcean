@@ -33,6 +33,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Stamina")
 	void ModifyStamina(float Amount);
 
+	/** True if at least Amount stamina is available (and not exhausted). */
+	UFUNCTION(BlueprintPure, Category="Stamina")
+	bool CanAfford(float Amount) const { return !bExhausted && Stamina >= Amount; }
+
+	/**
+	 * Spends Amount stamina if available, for one-off efforts like a wrench swing. Restarts the regeneration delay.
+	 * Returns false (and spends nothing) if there isn't enough.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Stamina")
+	bool TryConsume(float Amount);
+
+	/** Stamina when full. */
+	UFUNCTION(BlueprintPure, Category="Stamina")
+	float GetMaxStamina() const { return MaxStamina; }
+
 	/** Current stamina, from 0 to MaxStamina. */
 	UFUNCTION(BlueprintPure, Category="Stamina")
 	float GetStamina() const { return Stamina; }
