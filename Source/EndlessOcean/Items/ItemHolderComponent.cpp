@@ -1,7 +1,10 @@
 #include "ItemHolderComponent.h"
 
+#include "Camera/CameraComponent.h"
 #include "CollisionQueryParams.h"
 #include "Engine/World.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/Pawn.h"
 #include "HeldItem.h"
@@ -19,11 +22,16 @@ namespace ItemHolder
 
 	/** How far to keep a released item from a wall it would otherwise be pushed into. */
 	static constexpr float WallClearance = 8.0f;
+
+	/** Offsets into the noise function so each sway axis wanders independently. */
+	static constexpr float NoiseSeeds[5] = { 0.0f, 17.3f, 31.7f, 47.1f, 59.9f };
 }
 
 UItemHolderComponent::UItemHolderComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	// Ticks only while an item is in the hand (see SetHeldItem / ClearHand).
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
 }
 
 void UItemHolderComponent::BeginPlay()
@@ -36,6 +44,122 @@ void UItemHolderComponent::BeginPlay()
 	if (!HandAnchor)
 	{
 		HandAnchor = GetOwner()->GetRootComponent();
+	}
+
+	OwnerCamera = GetOwner()->FindComponentByClass<UCameraComponent>();
+	if (const UCameraComponent* Camera = OwnerCamera.Get())
+	{
+		BaseFOV = Camera->FieldOfView;
+	}
+}
+
+void UItemHolderComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	UpdateCameraFOV(DeltaTime);
+
+	if (!HeldItem)
+	{
+		// Keep ticking only until the FOV has returned to normal after letting go of an aimed item.
+		const UCameraComponent* Camera = OwnerCamera.Get();
+		if (!Camera || FMath::IsNearlyEqual(Camera->FieldOfView, BaseFOV, 0.05f))
+		{
+			SetComponentTickEnabled(false);
+		}
+		return;
+	}
+
+	const UItemDefinition* Definition = ItemHolder::GetDefaults(HeldItem);
+
+	// Entering water with an item that can't be used there: stop what it's doing and lower it.
+	const bool bSwimming = IsOwnerSwimming();
+	const bool bLower = bSwimming && !HeldItem->IsUsableWhileSwimming();
+	if (bSwimming != bWasSwimming)
+	{
+		bWasSwimming = bSwimming;
+		if (bLower)
+		{
+			HeldItem->CancelActions();
+		}
+	}
+	LoweredAlpha = FMath::FInterpTo(LoweredAlpha, bLower ? 1.0f : 0.0f, DeltaTime, LowerBlendSpeed);
+
+	// Procedural sway: smooth Perlin noise per axis, bigger while moving, scaled by the item (aiming shrinks it).
+	SwayTime += DeltaTime * Definition->SwaySpeed;
+	const float Speed = GetOwner()->GetVelocity().Size();
+	const float MoveAlpha = FMath::Clamp(Speed / MovementSwayReferenceSpeed, 0.0f, 1.0f);
+	const float Scale = (1.0f + Definition->MovementSwayMultiplier * MoveAlpha) * HeldItem->GetSwayScale();
+
+	auto Noise = [this](int32 Axis) { return FMath::PerlinNoise1D(SwayTime + ItemHolder::NoiseSeeds[Axis]); };
+	const float RotAmp = Definition->SwayRotationAmplitude * Scale;
+	const float LocAmp = Definition->SwayLocationAmplitude * Scale;
+	CurrentSwayRotation = FRotator(Noise(0) * RotAmp, Noise(1) * RotAmp, Noise(2) * RotAmp * 0.5f);
+	const FVector SwayLocation(0.0f, Noise(3) * LocAmp, Noise(4) * LocAmp);
+
+	const FTransform Additive = HeldItem->GetAdditivePose();
+
+	const FVector Location = Definition->HeldLocationOffset + Definition->LoweredLocationOffset * LoweredAlpha
+		+ SwayLocation + Additive.GetLocation();
+	const FRotator Rotation = Definition->HeldRotationOffset + Definition->LoweredRotationOffset * LoweredAlpha
+		+ CurrentSwayRotation + Additive.Rotator();
+
+	HeldItem->SetActorRelativeLocation(Location);
+	HeldItem->SetActorRelativeRotation(Rotation);
+}
+
+void UItemHolderComponent::UpdateCameraFOV(float DeltaTime)
+{
+	UCameraComponent* Camera = OwnerCamera.Get();
+	if (!Camera)
+	{
+		return;
+	}
+
+	float TargetFOV = BaseFOV;
+	float AimFOV = BaseFOV;
+	float AimAlpha = 0.0f;
+	if (HeldItem && HeldItem->GetAimView(AimFOV, AimAlpha))
+	{
+		TargetFOV = FMath::Lerp(BaseFOV, AimFOV, FMath::Clamp(AimAlpha, 0.0f, 1.0f));
+	}
+
+	Camera->SetFieldOfView(FMath::FInterpTo(Camera->FieldOfView, TargetFOV, DeltaTime, FOVBlendSpeed));
+}
+
+bool UItemHolderComponent::IsOwnerSwimming() const
+{
+	const ACharacter* Character = Cast<ACharacter>(GetOwner());
+	return Character && Character->GetCharacterMovement() && Character->GetCharacterMovement()->IsSwimming();
+}
+
+bool UItemHolderComponent::CanUseHeldItem() const
+{
+	return HeldItem && (!IsOwnerSwimming() || HeldItem->IsUsableWhileSwimming());
+}
+
+void UItemHolderComponent::StartAltAction()
+{
+	if (CanUseHeldItem())
+	{
+		HeldItem->AltActionStarted();
+	}
+}
+
+void UItemHolderComponent::StopAltAction()
+{
+	// Always forwarded, so an item never gets stuck aiming.
+	if (HeldItem)
+	{
+		HeldItem->AltActionCompleted();
+	}
+}
+
+void UItemHolderComponent::ReloadHeldItem()
+{
+	if (CanUseHeldItem())
+	{
+		HeldItem->ReloadPressed();
 	}
 }
 
@@ -63,7 +187,7 @@ bool UItemHolderComponent::PickUp(AHeldItem* Item)
 
 void UItemHolderComponent::UseHeldItem()
 {
-	if (HeldItem)
+	if (CanUseHeldItem())
 	{
 		HeldItem->UsePrimary();
 	}
@@ -164,6 +288,11 @@ void UItemHolderComponent::SetHeldItem(AHeldItem* Item, int32 FromSlot)
 	{
 		Item->SetHeld(this, HandAnchor);
 		Item->OnDestroyed.AddUniqueDynamic(this, &UItemHolderComponent::HandleHeldItemDestroyed);
+
+		// Start the new item lowered if we're already swimming, so it doesn't flash up and back down.
+		bWasSwimming = IsOwnerSwimming();
+		LoweredAlpha = (bWasSwimming && !Item->IsUsableWhileSwimming()) ? 1.0f : 0.0f;
+		SetComponentTickEnabled(true);
 	}
 }
 
@@ -172,8 +301,11 @@ AHeldItem* UItemHolderComponent::ClearHand()
 	AHeldItem* Previous = HeldItem;
 	if (Previous)
 	{
+		// Leaving the hand ends any aim, reload or swing.
+		Previous->CancelActions();
 		Previous->OnDestroyed.RemoveDynamic(this, &UItemHolderComponent::HandleHeldItemDestroyed);
 	}
+	CurrentSwayRotation = FRotator::ZeroRotator;
 
 	HeldItem = nullptr;
 	ActiveSlot = INDEX_NONE;

@@ -7,6 +7,7 @@
 
 class UItemDefinition;
 class UItemHolderComponent;
+class UPrimitiveComponent;
 class UStaticMeshComponent;
 
 /** Where an item currently is. */
@@ -65,6 +66,44 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Item")
 	void UsePrimary();
 
+	/**
+	 * Right mouse pressed. By default this throws the item; items with a better use override it
+	 * (the pistol aims, the wrench does nothing so it isn't thrown by accident).
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Item")
+	void AltActionStarted();
+
+	/** Right mouse released (ends aiming, for example). */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Item")
+	void AltActionCompleted();
+
+	/** Reload key pressed. Does nothing by default. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Item")
+	void ReloadPressed();
+
+	/**
+	 * Stop whatever the item is doing: aiming, reloading, mid-swing. Called when it leaves the hand, and when the
+	 * holder starts swimming with an item that can't be used underwater.
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Item")
+	void CancelActions();
+
+	/** Extra pose on top of the held offset (aim-down-sights, swing arc, recoil kick), relative to the hand anchor. */
+	virtual FTransform GetAdditivePose() const { return FTransform::Identity; }
+
+	/** Multiplier for the hand's procedural sway. Aiming lowers it. */
+	virtual float GetSwayScale() const { return 1.0f; }
+
+	/**
+	 * Field of view this item wants while aiming, and how far towards it to blend (0 = normal view).
+	 * Returns false if the item never changes the view.
+	 */
+	virtual bool GetAimView(float& OutFOV, float& OutAlpha) const { return false; }
+
+	/** True if the definition allows using this item while swimming. */
+	UFUNCTION(BlueprintPure, Category="Item")
+	bool IsUsableWhileSwimming() const;
+
 	/** True if the item can currently be picked up from the world. */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Item")
 	bool CanBePickedUp() const;
@@ -94,6 +133,10 @@ protected:
 	virtual FText GetInteractionPrompt_Implementation() const override;
 
 	virtual void UsePrimary_Implementation() {}
+	virtual void AltActionStarted_Implementation();
+	virtual void AltActionCompleted_Implementation() {}
+	virtual void ReloadPressed_Implementation() {}
+	virtual void CancelActions_Implementation() {}
 	virtual bool CanBePickedUp_Implementation() const { return true; }
 	virtual bool CanBeStowed_Implementation() const { return true; }
 
@@ -116,7 +159,20 @@ private:
 	/** The hand holding us. Weak because the holder owns the relationship, not us. */
 	TWeakObjectPtr<UItemHolderComponent> Holder;
 
-	/** Switches between "in the world" physics and "carried" (no physics, no collision). */
+	/** A part whose collision was switched off while carried, and the setting to give back when released. */
+	struct FSuspendedCollision
+	{
+		TWeakObjectPtr<UPrimitiveComponent> Component;
+		ECollisionEnabled::Type Collision;
+	};
+
+	/**
+	 * Parts (anything but the root Mesh) that had collision when the item was picked up. Carried items must not
+	 * collide with anything, or a part in front of the camera would block the holder's own capsule and traces.
+	 */
+	TArray<FSuspendedCollision> SuspendedCollision;
+
+	/** Switches between "in the world" physics and "carried" (no physics, no collision on any part). */
 	void SetPhysicalInWorld(bool bInWorld);
 
 	/** Updates the state and broadcasts. */

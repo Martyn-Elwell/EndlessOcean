@@ -5,6 +5,7 @@
 #include "ItemHolderComponent.generated.h"
 
 class AHeldItem;
+class UCameraComponent;
 class UInventoryComponent;
 class USceneComponent;
 
@@ -19,8 +20,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHeldItemChangedSignature, AHeldIte
  *  - Equipping from a slot swaps the held item into that slot (or drops it if it can't be stowed).
  *
  * Works with an optional UInventoryComponent on the same actor. Without one, held items are always dropped.
+ *
+ * The hand also poses the held item every frame (procedural sway, lowering it while swimming, the item's own aim or
+ * swing pose) and applies its aim FOV to the owner's camera. That's the one place Tick is used, and only while
+ * holding something.
  */
-UCLASS(ClassGroup=(EndlessOcean), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(EndlessOcean), PrioritizeCategories=(ItemHolder), meta=(BlueprintSpawnableComponent))
 class ENDLESSOCEAN_API UItemHolderComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -45,9 +50,29 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Item Holder")
 	bool PickUp(AHeldItem* Item);
 
-	/** Uses the held item (e.g. lights a flare). */
+	/** Uses the held item (e.g. lights a flare). Ignored if the item can't be used right now (e.g. swimming). */
 	UFUNCTION(BlueprintCallable, Category="Item Holder")
 	void UseHeldItem();
+
+	/** Starts the held item's alternate action (right mouse: aim, or throw by default). */
+	UFUNCTION(BlueprintCallable, Category="Item Holder")
+	void StartAltAction();
+
+	/** Ends the held item's alternate action (right mouse released). */
+	UFUNCTION(BlueprintCallable, Category="Item Holder")
+	void StopAltAction();
+
+	/** Asks the held item to reload. */
+	UFUNCTION(BlueprintCallable, Category="Item Holder")
+	void ReloadHeldItem();
+
+	/** True if the held item can be used right now (not lowered for swimming). */
+	UFUNCTION(BlueprintPure, Category="Item Holder")
+	bool CanUseHeldItem() const;
+
+	/** The hand's current procedural sway rotation. Weapons add it to their aim so shots go where the item points. */
+	UFUNCTION(BlueprintPure, Category="Item Holder")
+	FRotator GetSwayRotation() const { return CurrentSwayRotation; }
 
 	/** Gently drops the held item in front of the character. */
 	UFUNCTION(BlueprintCallable, Category="Item Holder")
@@ -77,7 +102,42 @@ protected:
 
 	virtual void BeginPlay() override;
 
+	/**
+	 * Poses the held item every frame: base offset + lowered-for-swimming offset + procedural sway + the item's own
+	 * additive pose. Also applies the item's aim FOV. Only enabled while something is in the hand.
+	 */
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	/** Owner speed at which movement sway reaches its full MovementSwayMultiplier. */
+	UPROPERTY(EditAnywhere, Category="ItemHolder", meta=(ClampMin=1, ClampMax=1000, Units="cm/s"))
+	float MovementSwayReferenceSpeed = 250.0f;
+
+	/** How quickly items lower and raise when entering or leaving water. */
+	UPROPERTY(EditAnywhere, Category="ItemHolder", meta=(ClampMin=0.1, ClampMax=30))
+	float LowerBlendSpeed = 6.0f;
+
+	/** How quickly the camera FOV follows an aiming item. */
+	UPROPERTY(EditAnywhere, Category="ItemHolder", meta=(ClampMin=0.1, ClampMax=30))
+	float FOVBlendSpeed = 12.0f;
+
 private:
+
+	/** Owner's camera, for aim FOV. */
+	TWeakObjectPtr<UCameraComponent> OwnerCamera;
+
+	/** The camera's FOV before any aiming, captured on BeginPlay. */
+	float BaseFOV = 90.0f;
+
+	float SwayTime = 0.0f;
+	float LoweredAlpha = 0.0f;
+	bool bWasSwimming = false;
+	FRotator CurrentSwayRotation = FRotator::ZeroRotator;
+
+	/** True if the owner is a character currently swimming. */
+	bool IsOwnerSwimming() const;
+
+	/** Blends the owner's camera FOV towards the held item's aim FOV (or back to BaseFOV). */
+	void UpdateCameraFOV(float DeltaTime);
 
 	/** What held items attach to. */
 	UPROPERTY(Transient)
